@@ -30,6 +30,40 @@ class Board:
     def empty(self):
         return self.flip(self.occupied())
 
+    def occupiedByColour(self,colour):
+        occupiedBoard = 0
+        if colour == "w":
+            for x in range(0,6):
+                occupiedBoard = occupiedBoard|self.pieceBoards[x]
+        else:
+            for x in range(6,12):
+                occupiedBoard = occupiedBoard|self.pieceBoards[x]
+        return occupiedBoard
+
+    def north(self,bitboard):
+        return bitboard<<8
+    
+    def south(self,bitboard):
+        return bitboard>>8
+
+    def east(self,bitboard):
+        return bitboard<<1
+
+    def west(self,bitboard):
+        return bitboard>>1
+
+    def northEast(self,bitboard):
+        return bitboard<<9
+
+    def northWest(self,bitboard):
+        return bitboard<<7
+
+    def southEast(self,bitboard):
+        return bitboard>>7
+
+    def southWest(self,bitboard):
+        return bitboard>>9
+
     def clear(self):
         for x in range(0,12):
             self.pieceBoards[x] = 0
@@ -98,10 +132,15 @@ class Board:
             x += 1
             
     def notationToIndex(self, notation):
-        file = self.files.index(notation[1])        
-        rank = abs(8 - int(notation[2]))
+        file = self.files.index(notation[0])        
+        rank = abs(8 - int(notation[1]))
 
         return 8*rank + file
+
+    def indexToNotation(self, index):
+        rank = abs(8-(index>>3))
+        file = self.files[index&7]
+        print(file + str(rank))
 
     def notationToInt(self, notation):
         index = self.notationToIndex(notation)
@@ -110,15 +149,35 @@ class Board:
                 
         return int(binRep,2)
 
-def visualizeBitboard(intBoard):
+    def executeMove(self,piece,startSquare,endSquare):
+        oldBoard = self.pieceBoards[self.pieceNotation.index(piece)]
+        newBoard = (oldBoard|self.notationToInt(endSquare))&~self.notationToInt(startSquare)
+        self.pieceBoards[self.pieceNotation.index(piece)] = newBoard
+
+    def generateMoves(self, colour):
+        if colour == "w":
+            singlePawnMoves = self.north(self.pieceBoards[0])&self.empty()
+            #4278190080 = rank 4
+            doublePawnMoves = self.north(singlePawnMoves)&self.empty()&4278190080
+            attackPawnMoves = (self.northEast(self.pieceBoards[0])|self.northWest(self.pieceBoards[0]))&self.occupiedByColour("b")
+        return singlePawnMoves|doublePawnMoves|attackPawnMoves
+
+def visBitboard(intBoard):
     bitboard = '{:064b}'.format(intBoard)
     for x in range(0, 8):
         print(bitboard[8*x:8*x+8])
 
 board = Board()
 board.loadBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+board.printBoard()
 
-visualizeBitboard(board.empty())
+while True:
+    print(" ")
+    move = input("Move: ")
+    board.executeMove("P",move.split(" ")[0], move.split(" ")[1])
+    board.printBoard()
+
+#visualizeBitboard(board.generateMoves("w"))
 
 #visualizeBitboard('{:064b}'.format(board.pieceBoards[0]))
 #board.printBoard()
